@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>33 Erros Digitais</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  /* ============ TOKENS ============ */
+  :root{
+    --bg:#0c0c0e;
+    --bg-soft:#141416;
+    --ink:#f3efe7;
+    --ink-dim:#9a968f;
+    --line: rgba(243,239,231,0.10);
+    --accent:#9caf88;       /* muted sage, specimen-tag green */
+    --accent-ink:#1b1f17;
+    --radius:2px;
+    --gap:6px;
+    --tile-w:220px; /* fallback, recalculated in JS to match original fluid width */
+    --a3-ratio: 0.70707; /* A3 portrait: 297mm / 420mm; tile height derives from this so nothing is cropped */
+    --ease:cubic-bezier(.16,.84,.32,1);
+  }
+  html.light{
+    --bg:#f4f1ea;
+    --bg-soft:#ffffff;
+    --ink:#15140f;
+    --ink-dim:#6b665c;
+    --line: rgba(21,20,15,0.12);
+    --accent:#5a7048;
+    --accent-ink:#f4f1ea;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    overflow-x:hidden;
+    transition: background .4s var(--ease), color .4s var(--ease);
+  }
+  a{color:inherit;}
+  button{font-family:inherit;}
+
+  .mono{
+    font-family:'Space Mono', monospace;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+  }
+
+  /* ============ WALL ============ */
+  .wall-wrap{
+    position:relative;
+    padding:110px 4px 4px;
+  }
+  .wall{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    overflow:hidden;
+  }
+
+  .wall-row{
+    display:flex;
+    gap:6px;
+    width:max-content;
+    will-change: transform;
+  }
+
+  .tile{
+    position:relative;
+    overflow:hidden;
+    border-radius:var(--radius);
+    cursor:pointer;
+    background:var(--bg-soft);
+    border:0;
+    padding:0;
+    margin:0;
+    display:block;
+    flex:0 0 var(--tile-w);
+    width:var(--tile-w);
+    aspect-ratio: var(--a3-ratio);
+  }
+  .tile .placeholder{
+    width:100%; height:100%; display:block; box-sizing:border-box;
+    background:var(--bg-soft);
+    border:1px solid var(--line);
+    transition: transform .6s var(--ease), border-color .3s var(--ease);
+  }
+  .tile img{
+    width:100%; height:100%; display:block;
+    object-fit:cover; /* safe: tile box already matches the A3 ratio exactly */
+    transition: transform .6s var(--ease);
+  }
+  .tile:hover img{ transform: scale(1.045); }
+  .tile:hover .placeholder{ transform: scale(1.045); border-color: var(--ink-dim); }
+  .tile:hover{ z-index:2; }
+
+  .tile:focus-visible{
+    outline:2px solid var(--accent);
+    outline-offset:-2px;
+    z-index:3;
+  }
+
+  .tag{
+    position:absolute; left:0; bottom:0; right:0;
+    padding:8px 9px 7px;
+    font-size:10px;
+    color:#f3efe7;
+    background:linear-gradient(to top, rgba(0,0,0,.55), rgba(0,0,0,0));
+    opacity:0; transform:translateY(6px);
+    transition: opacity .25s var(--ease), transform .25s var(--ease);
+    display:flex; justify-content:space-between; gap:6px;
+    pointer-events:none;
+  }
+  .tile:hover .tag, .tile:focus-visible .tag{ opacity:1; transform:translateY(0); }
+
+  @keyframes rise{
+    from{ opacity:0; }
+    to{ opacity:1; }
+  }
+
+  /* ============ INTRO CAPTION ============ */
+  .intro{
+    position:fixed; left:26px; bottom:26px; z-index:40;
+    max-width:380px;
+    pointer-events:none;
+  }
+  .intro .eyebrow{
+    font-size:10px; color:var(--accent);
+    display:flex; align-items:center; gap:8px;
+    margin-bottom:10px;
+  }
+  .intro .eyebrow::before{
+    content:''; width:18px; height:1px; background:var(--accent);
+  }
+  .intro h1{
+    font-family:'Fraunces', serif;
+    font-weight:500; font-style:italic;
+    font-size:clamp(34px, 6vw, 56px);
+    line-height:.95;
+    margin:0 0 10px;
+  }
+  .intro p{
+    font-size:13px; line-height:1.5; color:var(--ink-dim);
+    margin:0;
+    max-width:300px;
+  }
+
+  /* ============ VIEWER ============ */
+  .viewer{
+    position:fixed; inset:0; z-index:100;
+    display:flex; align-items:center; justify-content:center;
+    visibility:hidden;
+  }
+  .viewer[data-open="true"]{ visibility:visible; }
+
+  .viewer-backdrop{
+    position:absolute; inset:0;
+    background: rgba(8,8,9,0);
+    backdrop-filter: blur(0px);
+    transition: background .45s var(--ease), backdrop-filter .45s var(--ease);
+  }
+  html.light .viewer-backdrop{ background: rgba(244,241,234,0); }
+  .viewer[data-open="true"] .viewer-backdrop{
+    background: rgba(8,8,9,.72);
+    backdrop-filter: blur(14px);
+  }
+  html.light .viewer[data-open="true"] .viewer-backdrop{
+    background: rgba(244,241,234,.82);
+  }
+
+  .viewer-body{
+    position:relative; z-index:1;
+    display:flex; align-items:center; gap:48px;
+    width:min(1320px, 94vw);
+    max-height:88vh;
+    opacity:0; transform: scale(.96) translateY(10px);
+    transition: opacity .4s var(--ease), transform .4s var(--ease);
+  }
+  .viewer[data-open="true"] .viewer-body{
+    opacity:1; transform: scale(1) translateY(0);
+  }
+
+  .viewer-frame{
+    flex: 1 1 48%;
+    max-height:84vh;
+    display:flex; align-items:center; justify-content:center;
+    position:relative;
+  }
+  .viewer-frame img{
+    max-width:100%; max-height:84vh;
+    object-fit:contain;
+    border-radius:2px;
+    box-shadow: 0 30px 80px rgba(0,0,0,.5);
+  }
+  .viewer-placeholder{
+    width: min(56vh, 60vw, 480px);
+    aspect-ratio: var(--a3-ratio);
+    max-height:84vh;
+    background:var(--bg-soft);
+    border:1px solid var(--line);
+    border-radius:2px;
+    box-shadow: 0 30px 80px rgba(0,0,0,.5);
+    position:relative;
+    overflow:hidden;
+  }
+  .viewer-placeholder img{
+    width:100%; height:100%;
+    object-fit:cover; /* box already matches the A3 ratio, so nothing is cropped */
+    display:block;
+  }
+
+  /* before/after compare overlay, sits on top of viewer-placeholder / image */
+  .compare-before{
+    position:absolute; inset:0;
+    background:var(--bg-soft);
+    clip-path: inset(0 calc(100% - var(--compare-pos, 50%)) 0 0);
+    pointer-events:none;
+    display:none;
+  }
+  .compare-active .compare-before{ display:block; }
+  .compare-handle{
+    position:absolute; top:0; bottom:0;
+    left:var(--compare-pos, 50%);
+    width:2px; background:var(--ink);
+    transform:translateX(-1px);
+    pointer-events:none;
+    display:none;
+    box-shadow: 0 0 0 1px rgba(0,0,0,.3);
+  }
+  .compare-active .compare-handle{ display:block; }
+  .compare-grip{
+    position:absolute; top:50%; left:50%;
+    transform:translate(-50%,-50%);
+    width:30px; height:30px; border-radius:50%;
+    background:var(--ink); color:var(--bg);
+    display:flex; align-items:center; justify-content:center;
+    pointer-events:none;
+  }
+  .compare-grip svg{ width:13px; height:13px; }
+  .compare-label{
+    position:absolute; bottom:10px;
+    font-size:9px; letter-spacing:.08em; text-transform:uppercase;
+    font-family:'Space Mono', monospace;
+    color:var(--ink); background:rgba(0,0,0,.45);
+    padding:4px 7px; border-radius:2px;
+    pointer-events:none;
+    display:none;
+  }
+  .compare-active .compare-label{ display:block; }
+  .compare-label.before{ left:10px; }
+  .compare-label.after{ right:10px; }
+
+  .viewer-panel{
+    flex: 1 1 40%;
+    max-width:440px;
+    max-height:84vh;
+    display:flex;
+    flex-direction:column;
+    min-height:0;
+  }
+  .viewer-panel .blurb{
+    flex:0 0 auto;
+    font-size:14px; line-height:1.65; color:var(--ink);
+    margin:0 0 22px;
+  }
+
+  /* effects disclosure */
+  .effects{
+    border-top:1px solid var(--line);
+    padding-top:16px;
+    margin-bottom:18px;
+    flex:0 1 auto;
+    min-height:0;
+    display:flex;
+    flex-direction:column;
+  }
+  .effects[open]{
+    flex:1 1 auto;
+  }
+  .effects summary{
+    list-style:none;
+    cursor:pointer;
+    display:flex; align-items:center; justify-content:space-between;
+    font-size:11px; color:var(--ink-dim);
+    user-select:none;
+    flex:0 0 auto;
+  }
+  .effects summary::-webkit-details-marker{ display:none; }
+  .effects summary .chev{
+    width:9px; height:9px;
+    transition: transform .3s var(--ease);
+  }
+  .effects[open] summary .chev{ transform: rotate(180deg); }
+  .effects-list{
+    list-style:none; margin:4px 0 0; padding:4px 4px 4px 0;
+    display:flex; flex-direction:column;
+    flex:1 1 auto;
+    min-height:0;
+    max-height: clamp(160px, 38vh, 420px);
+    overflow-y:auto;
+    scroll-behavior:smooth;
+    scrollbar-width:thin;
+    scrollbar-color: var(--ink-dim) transparent;
+    transition: mask-image .25s var(--ease), -webkit-mask-image .25s var(--ease);
+  }
+  .effects-list::-webkit-scrollbar{ width:5px; }
+  .effects-list::-webkit-scrollbar-track{ background:transparent; }
+  .effects-list::-webkit-scrollbar-thumb{ background:var(--line); border-radius:3px; }
+  .effects-list::-webkit-scrollbar-thumb:hover{ background:var(--ink-dim); }
+  .effects-list.has-more-below{
+    mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent 100%);
+  }
+  .effects-list li{
+    padding:14px 0;
+    border-top:1px solid var(--line);
+  }
+  .effects-list li:first-child{ border-top:0; padding-top:10px; }
+  .fx-row{
+    display:flex; align-items:baseline; justify-content:space-between;
+    gap:14px;
+  }
+  .effects-list .fx-name{
+    color:var(--ink);
+    font-weight:600;
+    font-size:12.5px;
+    flex:0 0 auto;
+  }
+  .effects-list .fx-value{
+    color:var(--accent);
+    font-family:'Space Mono', monospace;
+    font-size:10.5px;
+    letter-spacing:.02em;
+    text-align:right;
+    flex:0 1 auto;
+  }
+  .effects-list .fx-desc{
+    color:var(--ink-dim);
+    font-size:12px;
+    line-height:1.55;
+    margin-top:6px;
+    padding-right:4px;
+  }
+
+  /* before/after toggle */
+  .compare-toggle{
+    border:1px solid var(--line);
+    background:transparent; color:var(--ink);
+    font-size:12px; padding:11px 18px; border-radius:30px;
+    cursor:pointer; transition: all .2s var(--ease);
+    display:inline-flex; align-items:center; gap:8px;
+  }
+  .compare-toggle:hover{ border-color:var(--ink); }
+  .compare-toggle[aria-pressed="true"]{ background:var(--ink); color:var(--bg); border-color:var(--ink); }
+  .compare-toggle svg{ width:13px; height:13px; }
+
+  /* viewer chrome: close / prev / next / counter */
+  .viewer-close{
+    position:absolute; top:28px; right:28px; z-index:5;
+    width:38px; height:38px; border-radius:50%;
+    border:1px solid var(--line); background:var(--bg-soft); color:var(--ink);
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; opacity:0; transform:translateY(-6px);
+    transition: opacity .4s var(--ease) .1s, transform .4s var(--ease) .1s;
+  }
+  .viewer[data-open="true"] .viewer-close{ opacity:1; transform:translateY(0); }
+  .viewer-close svg{ width:14px; height:14px; }
+
+  .viewer-arrow{
+    position:absolute; top:50%; transform:translateY(-50%);
+    width:42px; height:42px; border-radius:50%;
+    border:1px solid var(--line); background:var(--bg-soft); color:var(--ink);
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; z-index:5;
+    opacity:0; transition: opacity .4s var(--ease) .15s, border-color .2s;
+  }
+  .viewer[data-open="true"] .viewer-arrow{ opacity:1; }
+  .viewer-arrow:hover{ border-color:var(--ink); }
+  .viewer-arrow.prev{ left:24px; }
+  .viewer-arrow.next{ right:24px; }
+  .viewer-arrow svg{ width:16px; height:16px; }
+
+  .viewer-counter{
+    position:absolute; left:28px; top:30px; z-index:5;
+    font-size:11px; color:var(--ink-dim);
+    opacity:0; transition: opacity .4s var(--ease) .15s;
+  }
+  .viewer[data-open="true"] .viewer-counter{ opacity:1; }
+
+  /* ============ RESPONSIVE ============ */
+  @media (max-width: 860px){
+    .nav{ display:none; }
+    .intro{ max-width:260px; }
+    .intro h1{ font-size:34px; }
+    .wall{ --tile-w:130px; }
+    .viewer-body{
+      flex-direction:column; gap:18px; width:94vw; max-height:90vh;
+      overflow-y:auto; padding:10px 0 30px;
+    }
+    .viewer-frame{ max-height:50vh; }
+    .viewer-frame img{ max-height:50vh; }
+    .viewer-panel{ max-width:none; padding:0 18px; max-height:none; }
+    .effects-list{ max-height:none; overflow-y:visible; mask-image:none; -webkit-mask-image:none; }
+    .viewer-arrow{ width:36px; height:36px; }
+    .viewer-arrow.prev{ left:10px; }
+    .viewer-arrow.next{ right:10px; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .tile, .tile .placeholder, .viewer-body, .viewer-backdrop, .viewer-close, .viewer-arrow, .viewer-counter{
+      transition:none !important; animation:none !important;
+    }
+  }
+</style>
+</head>
+<body>
+  <div class="wall-wrap">
+    <div class="wall" id="wall"></div>
+  </div>
+
+  <div class="intro">
+    <h1>33&nbsp;Erros&nbsp;Digitais</h1>
+    <p>Trabalho realizado por Dinis Soares</p>
+  </div>
+
+  <div class="viewer" id="viewer" data-open="false" role="dialog" aria-modal="true" aria-label="Detalhe da imagem">
+    <div class="viewer-backdrop" id="viewer-backdrop"></div>
+
+    <span class="viewer-counter mono" id="viewer-counter">01 / 33</span>
+
+    <button class="viewer-close" id="viewer-close" aria-label="Fechar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 5l14 14M19 5L5 19"/></svg>
+    </button>
+    <button class="viewer-arrow prev" id="viewer-prev" aria-label="Imagem anterior">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M15 5l-7 7 7 7"/></svg>
+    </button>
+    <button class="viewer-arrow next" id="viewer-next" aria-label="Imagem seguinte">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 5l7 7-7 7"/></svg>
+    </button>
+
+    <div class="viewer-body">
+      <div class="viewer-frame" id="viewer-frame">
+        <div id="viewer-img" class="viewer-placeholder">
+          <img id="viewer-img-el" alt="">
+          <div class="compare-before" id="compare-before"></div>
+          <div class="compare-handle" id="compare-handle">
+            <div class="compare-grip">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 7l-5 5 5 5M16 7l5 5-5 5"/></svg>
+            </div>
+          </div>
+          <span class="compare-label before" id="compare-label-before">Antes</span>
+          <span class="compare-label after" id="compare-label-after">Depois</span>
+        </div>
+      </div>
+      <div class="viewer-panel">
+        <p class="blurb" id="viewer-blurb">Legenda.</p>
+
+        <details class="effects" id="effects-disclosure">
+          <summary class="mono">
+            <span>Efeitos utilizados</span>
+            <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+          </summary>
+          <ul class="effects-list" id="effects-list"></ul>
+        </details>
+
+        <button class="compare-toggle" id="compare-toggle" aria-pressed="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 7l-5 5 5 5M16 7l5 5-5 5"/></svg>
+          <span id="compare-toggle-label">Comparar antes / depois</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+<script>
+/* =========================================================
+   FRAME DATA: 33 frames, every tile the same size (A3 ratio).
+   `file` maps each entry to its final photo in /Fotos Finais
+   and its pre-edit photo in /Fotos Antes (named "A IMG <n>.webp").
+   ========================================================= */
+// Efeitos por imagem, indexados pelo número do ficheiro (ex: "IMG 7.webp" -> 7).
+// Vamos preenchendo imagem a imagem; as que ainda não têm entrada aqui usam o placeholder por defeito.
+const EFFECTS_BY_NUM = {
+  1: [
+    { name: "Corrupção de canal", value: "Duotone vermelho-âmbar", desc: "Os canais de cor originais são substituídos por um mapa de duotone (Image > Mode > Duotone ou um Gradient Map), reduzindo toda a imagem a uma escala entre o vermelho e o âmbar." },
+    { name: "Esmagamento de pretos", value: "Contraste extremo", desc: "A pupila e as pestanas colapsam num preto absoluto: os pontos pretos do canal são puxados via Curves ou Levels até cortar toda a informação de sombra nessa zona." },
+    { name: "Saturação de sinal", value: "Levada ao limite", desc: "O branco do olho e a pele são empurrados para o limite de clipping, com a saturação no máximo via Hue/Saturation, perdendo gradação nas zonas mais claras." },
+    { name: "Ruído", value: "Visível", desc: "Uma camada de grão é aplicada sobre a imagem toda (Filter > Noise > Add Noise), aproximando-a da textura de uma fotografia analógica de alta sensibilidade." },
+  ],
+  2: [
+    { name: "Corrupção de canal", value: "Duotone vermelho", desc: "A paleta original é reduzida a um vermelho quase monocromático através de um Duotone ou Gradient Map, descartando os restantes canais de cor." },
+    { name: "Inversão de tons", value: "Parcial", desc: "A sobrancelha e o branco do olho invertem de claro para escuro, resultado de uma máscara local com Invert (Ctrl/Cmd+I) aplicada só a essa seleção." },
+    { name: "Esmagamento de pretos", value: "Contraste extremo", desc: "A íris e o canto interior do olho desaparecem num preto absoluto, com o ponto preto puxado via Curves até eliminar o detalhe nessa zona." },
+    { name: "Ruído", value: "Visível", desc: "Interferência granulada espalhada pela imagem (Add Noise), mais densa no fundo vermelho." },
+    { name: "Vinheta", value: "Marcada", desc: "Os cantos escurecem de forma mais agressiva que o centro através de uma vinheta (Lens Correction ou uma camada de Levels com máscara radial)." },
+  ],
+  3: [
+    { name: "Pixelização", value: "Seletiva", desc: "A figura humana e o cão são dissolvidos num mosaico de blocos de cor, resultado do filtro Mosaic ou Pixelate aplicado apenas a essa seleção." },
+  ],
+  4: [
+    { name: "Pixelização", value: "Blocos grandes, figura inteira", desc: "A figura humana é decomposta numa grelha de blocos quadrados de grande dimensão, do cabelo às calças, com o filtro Mosaic configurado para um tamanho de célula elevado; o contorno do corpo e da T-shirt perde a curva natural e fica recortado em ângulos retos que seguem essa grelha, mais visível nos ombros e nos braços cruzados." },
+  ],
+  5: [
+    { name: "Substituição de textura", value: "Nebulosa em silhueta", desc: "A silhueta do homem deixa de conter pele, roupa ou rosto e passa a estar preenchida por uma imagem de nebulosa estelar em tons de laranja, rosa e violeta, colada numa camada própria e recortada pela máscara da silhueta (clipping mask)." },
+    { name: "Desfocagem radial", value: "Esticada a partir do sujeito", desc: "Os troncos das árvores e os fetos em redor da figura esticam-se para fora, resultado de um Radial Blur em modo Zoom centrado no sujeito." },
+  ],
+  6: [
+    { name: "Preenchimento de silhueta", value: "Azul sólido, sem detalhe", desc: "As duas figuras perdem toda a informação de cor e textura (casacos, pele, óculos) e ficam reduzidas a um bloco sólido de azul, preenchido com Fill numa camada recortada pela silhueta." },
+    { name: "Sobreposição de texto", value: "Estética de erro de sistema", desc: "Sobre as silhuetas surgem fragmentos de texto branco em tipo de letra monoespaçado, com frases cortadas a meio e referências a deteção de erro e memória, adicionados com a ferramenta Text numa camada própria por cima da imagem." },
+  ],
+  7: [
+    { name: "Corrupção de canal", value: "Duotone preto-ciano", desc: "A paleta quente avermelhada da fotografia original é substituída por um duotone preto-ciano, aplicado via Gradient Map ou Duotone." },
+    { name: "Posterização", value: "Poucos níveis de tom", desc: "Os gradientes suaves da pele e do cabelo são reduzidos a blocos de tom plano com contornos abruptos, resultado do filtro Posterize com um número baixo de níveis." },
+    { name: "Ruído", value: "Textura granulada mantida", desc: "A camada de grão presente na fotografia original mantém-se visível sobre a nova paleta, acentuada pelo contraste mais duro entre as áreas claras e escuras." },
+  ],
+  8: [
+    { name: "Distorção por arrastamento horizontal", value: "Metade direita do rosto esticada", desc: "O lado direito do rosto, incluindo o olho, a boca e o maxilar, é esticado horizontalmente com a ferramenta Liquify (modo Push Left/Right ou Warp), derretendo os traços faciais nessa zona enquanto o lado esquerdo permanece intocado; o olho direito aumenta de tamanho e muda de forma como consequência direta desse arrasto, com o branco do olho a expandir-se de forma anómala em relação ao olho esquerdo." },
+    { name: "Riscas de varrimento", value: "Topo do cabelo", desc: "No limite superior da testa e do cabelo surgem riscas horizontais finas, criadas com uma seleção retangular repetida e um leve deslocamento (offset) entre cada faixa." },
+  ],
+  10: [
+    { name: "Corte em fatias verticais", value: "Bandas desalinhadas", desc: "A imagem é dividida em fatias verticais de larguras irregulares, cada fatia numa camada própria deslocada verticalmente em relação às vizinhas (seleção retangular + Move Tool), partindo os troncos das árvores em segmentos descontínuos." },
+    { name: "Saturação de sinal", value: "Verde mais vivo", desc: "A folhagem dos fetos e da copa ganha uma saturação mais vibrante e quase fluorescente do que na fotografia original, com o canal verde amplificado via Hue/Saturation." },
+    { name: "Linha de horizonte fraturada", value: "Quebra fetos/árvores", desc: "A linha onde os fetos encontram os troncos deixa de ser contínua, com saltos verticais abruptos entre fatias adjacentes, consequência direta do desalinhamento aplicado a cada faixa." },
+  ],
+
+  13: [
+    { name: "Corte em fatias verticais", value: "Blocos desalinhados", desc: "A imagem é dividida em colunas verticais deslocadas entre si (seleção retangular + Move Tool em camadas separadas), criando falhas de continuidade no rosto e no cabelo." },
+    { name: "Arrastamento de dados", value: "Rastos horizontais", desc: "Algumas zonas da face e do pescoço prolongam os próprios tons em direção lateral, efeito conseguido com Smudge Tool ou Motion Blur direcional aplicado só a essa seleção." },
+    { name: "Posterização", value: "Tons reduzidos", desc: "Os gradientes suaves da pele são reduzidos a transições mais duras entre zonas claras e escuras, resultado do filtro Posterize com poucos níveis." },
+    { name: "Monocromatização", value: "Escala de cinzentos", desc: "A cor original é removida via Desaturate ou Black & White, deixando o contraste como principal elemento visual." },
+  ],
+  15: [
+    { name: "Substituição de textura", value: "Ecrã de erro azul", desc: "A zona central da floresta é coberta por uma textura inspirada num ecrã de erro de sistema, colada numa camada própria com blend mode e opacidade ajustados para deixar a paisagem por baixo parcialmente visível." },
+    { name: "Sobreposição de texto", value: "Fragmentos de diagnóstico", desc: "Texto branco em estilo monoespaçado surge por cima da paisagem, com linhas incompletas e informação truncada, escrito com a ferramenta Text numa camada própria." },
+    { name: "Máscara de corrupção", value: "Área irregular", desc: "A interferência não cobre a imagem inteira de forma uniforme, deixando partes das árvores visíveis através do erro, resultado de uma layer mask de forma irregular pintada com baixa opacidade nas bordas." },
+  ],
+  16: [
+    { name: "Corte em fatias verticais", value: "Fragmentação da flor", desc: "A fotografia das flores é separada em blocos verticais de diferentes larguras, cada um deslocado numa camada própria, desalinhando pétalas, folhas e fundo." },
+    { name: "Corrupção de canal", value: "Canais misturados", desc: "Os verdes das folhas e os tons rosa das pétalas são reorganizados em faixas de cor sobrepostas, resultado de um Channel Mixer ou de canais individuais deslocados entre si." },
+    { name: "Arrastamento de dados", value: "Rastos de cor", desc: "Partes das pétalas e do fundo prolongam-se lateralmente em transparência, efeito conseguido com Smudge Tool ou uma cópia da camada com Motion Blur e opacidade reduzida." },
+    { name: "Pixelização", value: "Blocos sem detalhe", desc: "A textura fina das flores é parcialmente substituída por blocos geométricos, com o filtro Mosaic aplicado só a essa seleção." },
+  ],
+  17: [
+    { name: "Fragmentação em blocos", value: "Grelha irregular", desc: "A imagem inteira é decomposta numa grelha de retângulos de dimensões variáveis, deslocados entre si tanto horizontal como verticalmente: cada bloco numa camada própria movida com a Move Tool a partir de uma grelha de seleções." },
+    { name: "Riscas de varrimento", value: "Horizontais, zona das flores", desc: "Na área das pétalas surgem faixas horizontais densas em tons de rosa, laranja e amarelo, criadas a partir de seleções retangulares finas copiadas e repetidas em bandas contíguas." },
+    { name: "Arrastamento de dados", value: "Duplicação de fragmentos", desc: "Alguns blocos repetem partes da flor ou do fundo em posições adjacentes, resultado de copiar e colar o mesmo recorte em vários pontos da grelha." },
+    { name: "Inversão de luminosidade", value: "Zona superior", desc: "Na área do topo, os fragmentos que correspondem ao fundo claro da fotografia original aparecem como blocos esbranquiçados deslocados, com Invert aplicado a essa seleção via Curves ou Image > Adjustments > Invert." },
+  ],
+  19: [
+    { name: "Substituição de área", value: "Coluna central, vertical", desc: "O céu azul uniforme da fotografia original é substituído, na zona central, por uma massa de cor avermelhada-acastanhada com gradiente suave, pintada numa camada própria com um Gradient Tool e recortada por uma seleção vertical." },
+    { name: "Arrastamento vertical de píxeis", value: "Cor do telhado puxada para cima", desc: "A tonalidade da telha cor-de-tijolo do edifício parece ter sido esticada e prolongada verticalmente para cima, invadindo o espaço que era céu, efeito conseguido com Smudge Tool em modo vertical ou Motion Blur direcional aplicado a essa faixa." },
+    { name: "Gradiente de canal", value: "Vermelho-acastanhado a cinzento", desc: "A massa vertical de cor não é uniforme: o centro tende para um vermelho-acastanhado mais intenso e as laterais desvanecem para cinzentos neutros, com a opacidade e o blend mode da camada ajustados ao longo do gradiente." },
+  ],
+  26: [
+    { name: "Sobreposição de retângulos concêntricos", value: "Estrutura aninhada semitransparente", desc: "Sobre a textura das nuvens são sobrepostas várias molduras retangulares concêntricas, cada uma numa camada própria com opacidade diferente, criando uma estrutura de camadas geométricas que não existia na fotografia original." },
+    { name: "Variação de saturação entre camadas", value: "Azul mais saturado nas bordas exteriores", desc: "As camadas mais exteriores dos retângulos apresentam um azul ligeiramente mais saturado do que o centro, ajustado individualmente via Hue/Saturation em cada camada." },
+    { name: "Corrupção de canal", value: "Azul amplificado", desc: "A paleta original, com nuvens brancas e céu azul-acinzentado claro, é empurrada para um azul mais fundo e saturado em toda a imagem, via Color Balance ou Selective Color sobre os tons médios." },
+  ],
+  27: [
+    { name: "Corrupção de canal", value: "Duotone azul-branco", desc: "A paleta original, com tons de pele castanha, o castanho da camisola e o verde escuro da folhagem, é substituída por um duotone de azul e branco, aplicado via Gradient Map." },
+    { name: "Saturação de sinal", value: "Rosto apagado em branco", desc: "A zona do rosto é empurrada até ao branco absoluto sem nenhum detalhe de traços faciais, com o ponto branco puxado via Curves ou Levels nessa seleção até queimar a área (clipping)." },
+    { name: "Inversão de luminosidade", value: "Folhagem escura para azul vivo", desc: "O fundo de folhagem e flores escuras inverte o comportamento esperado: em vez de colapsar em preto, os verdes e os roxos escuros convertem-se em azul vivo com toques de ciano, resultado de um Invert ou Curves invertidas aplicadas só a essa seleção." },
+    { name: "Ruído", value: "Granulado sobre pele e camisola", desc: "Uma camada de ruído de grão fino cobre a figura (Add Noise), mais perceptível nas zonas de tom médio da camisola e nas margens do rosto sobreexposto." },
+    { name: "Apagamento de detalhe", value: "Óculos invisíveis", desc: "Os óculos de armação metálica, visíveis na fotografia original, desaparecem por completo na zona branca do rosto, consequência direta do clipping para branco nessa área." },
+  ],
+  28: [
+    { name: "Corrupção de canal", value: "Duotone azul-ciano", desc: "A paleta quente e variada da fotografia original, com o verde do sofá, o castanho da camisola, o laranja do pavimento e os tons de pele, é substituída por um duotone de azul e ciano, aplicado via Gradient Map." },
+    { name: "Saturação de sinal", value: "Zona superior colapsada em branco", desc: "A parede bege e a porta, presentes na metade superior da fotografia original, colapsam em branco absoluto sem qualquer detalhe, com o ponto branco puxado via Curves até atingir clipping nessa zona." },
+    { name: "Inversão de tons", value: "Rosto apagado em branco", desc: "O rosto do sujeito, que na fotografia original tem iluminação natural com detalhe facial visível, converte-se numa zona branca sem informação, com Curves ou Levels aplicados localmente até queimar os traços faciais." },
+    { name: "Esmagamento de pretos", value: "Sofá e figura fundidos em escuro", desc: "O sofá verde escuro e as roupas escuras da figura colapsam num azul escuro quase indistinguível entre si, com o ponto preto puxado via Curves até cortar a separação de planos." },
+  ],
+  23: [
+    { name: "Corrupção de canal", value: "Duotone verde-ciano", desc: "A paleta castanha e acinzentada da fotografia original é substituída por um duotone de verde e ciano, aplicado via Gradient Map." },
+    { name: "Riscas de varrimento", value: "Horizontais, fundo e céu", desc: "A zona do fundo, onde estava o céu e a paisagem desfocada, é atravessada por faixas horizontais em tons de azul-esverdeado, criadas a partir de seleções retangulares finas preenchidas e repetidas em banda." },
+    { name: "Inversão de tons", value: "Olhos do cão para branco", desc: "A íris e a pupila do animal, que na fotografia original têm tons âmbar e castanho escuro, aparecem como manchas brancas sem detalhe, resultado de Invert aplicado só a essa seleção." },
+    { name: "Artefactos dispersos", value: "Blocos isolados", desc: "Pequenos retângulos de cor discordante surgem espalhados pela imagem, tanto no fundo como junto à cabeça do cão, copiados e colados de outras zonas da imagem em pequenas seleções soltas." },
+    { name: "Ruído de textura", value: "Pelo com textura áspera", desc: "A superfície do pelo do cão, que na original tem um acabamento suave e contínuo, apresenta uma textura granulada e mais fragmentada, com Add Noise ou um filtro de textura aplicado só a essa seleção." },
+  ],
+  24: [
+    { name: "Corrupção de canal", value: "Duotone magenta-preto", desc: "A paleta original de tons de pele, castanho e branco é substituída por um duotone de magenta e preto, aplicado via Gradient Map." },
+    { name: "Inversão de fundo", value: "Branco colapsa em preto", desc: "O fundo branco neutro da fotografia original aparece como preto absoluto, com Invert aplicado só a essa seleção." },
+    { name: "Inversão de tons", value: "Cabelo e olhos para branco", desc: "O cabelo escuro inverte para uma zona clara e difusa, e os olhos, que tinham pupila escura, surgem como pontos brancos brilhantes sem informação de íris, resultado de Invert aplicado a essas seleções." },
+    { name: "Máscara de sombra", value: "Zona central da face em escuro", desc: "Uma área escura cobre a parte central do rosto, incluindo sobrancelhas, nariz e parte dos olhos, pintada numa camada de Multiply com uma layer mask de forma irregular." },
+    { name: "Ruído de textura", value: "Aspeto de lápis ou interferência analógica", desc: "A superfície da pele e do cabelo apresenta uma textura fina e irregular, semelhante a traços de lápis, conseguida com um filtro de textura (Filter Gallery) ou Add Noise combinado com um blend mode de contraste." },
+    { name: "Saturação de sinal", value: "Topo do crânio sobreexposto", desc: "A zona superior do cabelo está empurrada até ao limite branco, perdendo o detalhe de fio a fio, com o ponto branco puxado via Curves até clipping nessa zona." },
+  ],
+  25: [
+    { name: "Corrupção de canal", value: "Monocromatismo verde-lima", desc: "A paleta original, com tons de pele, o azul-marinho da camisola e o branco do fundo de sala, é substituída por um verde-lima monocromático, aplicado via Gradient Map sobre a versão a preto e branco da imagem." },
+    { name: "Esmagamento de pretos", value: "Fundo colapsado em preto", desc: "O fundo de sala com paredes, teto e outros elementos presentes na fotografia original desaparece por completo em preto absoluto, com o ponto preto puxado via Curves até cortar essa zona." },
+    { name: "Espelhamento horizontal", value: "Imagem invertida da esquerda para a direita", desc: "A composição foi horizontalmente espelhada (Image > Transform > Flip Horizontal) em relação à fotografia original, o que se verifica no texto da camisola, que aparece em imagem de espelho." },
+    { name: "Halo de contorno", value: "Luz difusa à volta da figura", desc: "O contorno da cabeça, das mãos e da camisola apresenta um halo luminoso que separa a figura do fundo negro, criado com uma camada extra em Screen ou Outer Glow ao longo da seleção da silhueta." },
+    { name: "Desfocagem suave", value: "Mãos e zona oral", desc: "As mãos e a área da boca mostram uma suavização dos contornos em relação à fotografia original, com Gaussian Blur aplicado localmente a essas seleções." },
+  ],
+  22: [ 
+    { name: "Corrupção de canal", value: "Duotone vermelho-branco", desc: "A paleta de pele e sombras da composição original é substituída por dois tons, vermelho saturado e branco, aplicados via Gradient Map." },
+    { name: "Esmagamento de pretos", value: "Contraste extremo", desc: "As íris, as sobrancelhas e as pálpebras desaparecem em preto absoluto sem gradação, com o ponto preto puxado via Curves até cortar essas zonas." },
+    { name: "Saturação de sinal", value: "Vermelho ao limite", desc: "A pele, que na fotografia original tem tons castanho-creme, é substituída por um vermelho no limite de saturação, com Hue/Saturation levado ao máximo." },
+    { name: "Ruído", value: "Granulado agressivo", desc: "Uma camada de ruído de grão grosso cobre toda a composição (Add Noise com intensidade alta), mais perceptível nas zonas de tom médio." },
+    { name: "Deslocamento entre fragmentos", value: "Juntas brancas visíveis", desc: "Os vários recortes de close-up de olhos que compõem a imagem original estão separados por zonas brancas que funcionam como juntas, resultado de cada recorte estar numa camada própria com um stroke ou padding branco entre elas; cada fragmento está numa escala e posição ligeiramente diferente dos outros, com um fragmento central rodado para inverter a orientação habitual." },
+  ],
+  30: [
+    { name: "Fragmentação triangular", value: "Grelha de triângulos, deslocamento vertical", desc: "A imagem inteira é decomposta numa grelha de triângulos alternados, com metade das peças deslocada verticalmente em relação à posição original (Move Tool sobre cada seleção triangular), criando um padrão repetido de losangos que parte os troncos, o céu e a vegetação em segmentos descontínuos." },
+    { name: "Saturação de sinal", value: "Verde e azul mais vivos", desc: "O verde da vegetação e o azul do céu ganham uma saturação mais vibrante do que na fotografia original, com Hue/Saturation aplicado a toda a imagem." },
+  ],
+  31: [
+    { name: "Fragmentação em grelha", value: "Blocos regulares, deslocamento vertical", desc: "A imagem inteira é decomposta numa grelha retangular regular, com cada bloco numa camada própria deslocada verticalmente para cima ou para baixo (Move Tool), partindo o tronco, os ramos e a copa do pinheiro em segmentos desalinhados entre si." },
+    { name: "Contraste", value: "Mais acentuado", desc: "A diferença entre as zonas claras do céu nublado e as zonas escuras do tronco e da silhueta da vegetação em primeiro plano é mais marcada do que na fotografia original, com Curves ou Levels aplicados a toda a imagem." },
+  ],
+  32: [
+    { name: "Monocromatização", value: "Preto e branco", desc: "A cor é removida via Desaturate ou Black & White, deixando o contraste e o grão como elementos visuais principais." },
+    { name: "Ruído", value: "Grão pronunciado", desc: "Uma camada de grão denso cobre toda a imagem (Add Noise com intensidade alta), aproximando-a da textura de uma fotografia analógica de alta sensibilidade." },
+    { name: "Distorção rotacional em anéis", value: "Cópias rodadas e desfasadas sobre o rosto", desc: "Sobre o rosto é sobreposta uma sequência de cópias da mesma zona, cada uma ligeiramente rodada e desfasada em relação à anterior, criando um padrão de anéis concêntricos que distorce os traços faciais entre a testa e o queixo enquanto o cabelo, as orelhas e a mão se mantêm sem essa distorção." },
+  ],
+  33: [
+    { name: "Monocromatização", value: "Preto e branco", desc: "A cor é removida via Desaturate ou Black & White, deixando o contraste como elemento visual principal." },
+    { name: "Distorção em túnel", value: "Cópias decrescentes encaixadas até ponto de fuga", desc: "A zona da cara é substituída por uma sequência de cópias decrescentes de si própria, encaixadas umas dentro das outras como aros concêntricos que recuam até um ponto de fuga ao centro, resultado de copiar, escalar e centrar repetidamente a mesma seleção em camadas sucessivas; o cabelo, o pescoço e os ombros mantêm a escala e a posição originais, sem essa repetição." },
+    { name: "Aberração de contorno", value: "Rasto claro entre os anéis", desc: "Entre cada anel da estrutura de túnel surge um rasto fino e esbranquiçado, consequência de um leve desalinhamento ou de um stroke aplicado ao contorno de cada camada copiada." },
+  ],
+  34: [
+    { name: "Posterização", value: "Paleta reduzida a vermelho, amarelo, branco e preto", desc: "A imagem inteira é reduzida a um número muito baixo de níveis de cor via Posterize, eliminando os gradientes da maquilhagem e da pele e deixando apenas blocos planos de vermelho, amarelo, branco e preto." },
+    { name: "Esmagamento de pretos", value: "Fundo colapsado em preto absoluto", desc: "A parede e a porta visíveis na fotografia original desaparecem por completo num preto sólido, com o ponto preto puxado via Curves até cortar toda essa zona." },
+    { name: "Ruído", value: "Grão denso", desc: "Uma camada de grão denso cobre toda a imagem (Add Noise com intensidade alta), mais visível dentro das áreas de preto absoluto." },
+  ],
+  35: [
+    { name: "Monocromatização", value: "Preto e branco", desc: "A cor é removida via Desaturate ou Black & White, deixando o contraste como elemento visual principal." },
+    { name: "Esmagamento de pretos", value: "Olhos e sombras colapsados", desc: "A zona dos olhos e as sombras junto ao nariz e à boca colapsam num preto absoluto sem detalhe, com o ponto preto puxado via Curves até cortar essas áreas." },
+    { name: "Contraste", value: "Levado ao limite", desc: "A diferença entre as zonas de pele clara, já com a base branca de maquilhagem, e as zonas escuras é amplificada via Curves ou Levels, aproximando a imagem de um negativo de alto contraste." },
+    { name: "Ruído", value: "Grão pronunciado", desc: "Uma camada de grão denso cobre toda a imagem (Add Noise com intensidade alta), reforçando a textura analógica sobre a pele." },
+  ],
+  37: [
+    { name: "Esmagamento de pretos", value: "Quase toda a imagem colapsada", desc: "Praticamente toda a fotografia desaparece num preto absoluto, com o ponto preto puxado via Curves até cortar quase todos os tons médios e claros, deixando apenas pequenos vestígios de luz na testa, nas bochechas e no queixo." },
+    { name: "Corrupção de canal", value: "Verde-ciano nos vestígios visíveis", desc: "As poucas zonas que escapam ao corte de preto surgem num verde-ciano saturado em vez da cor original, aplicado via Gradient Map ou Color Balance sobre os tons médios remanescentes." },
+  ],
+  38: [
+    { name: "Mapa de cores falsas", value: "Gradient Map multicor com contornos", desc: "Toda a imagem é convertida através de um Gradient Map ou efeito Solarize com múltiplas paragens de cor, que substitui os níveis de luminosidade originais por faixas de rosa, verde, azul e laranja organizadas em contornos concêntricos, mais visíveis no céu nublado." },
+    { name: "Inversão de luminosidade", value: "Zona mais clara do céu para rosa sólido", desc: "A área mais clara e sobreexposta do céu, junto ao sol coberto pelas nuvens, converte-se num círculo de rosa sólido sem textura, resultado do mapa de cores atingir o seu valor mais extremo nessa zona de luminosidade máxima." },
+  ],
+  39: [
+    { name: "Mapa de cores falsas", value: "Gradient Map multicor com contornos", desc: "Toda a imagem é convertida através de um Gradient Map ou efeito Solarize com múltiplas paragens de cor, substituindo os tons originais de verde e castanho por faixas de amarelo, azul e magenta organizadas em contornos que seguem os níveis de luminosidade da fotografia original." },
+  ],
+  40: [
+    { name: "Mapa de cores falsas", value: "Gradient Map multicor com contornos", desc: "Toda a imagem é convertida através de um Gradient Map ou efeito Solarize com múltiplas paragens de cor, substituindo o céu nublado original por faixas concêntricas de verde-limão, vermelho-acastanhado e amarelo organizadas segundo os níveis de luminosidade das nuvens." },
+    { name: "Saturação de sinal", value: "Torre e cabos em amarelo fluorescente", desc: "A estrutura metálica da torre e os cabos elétricos, que na fotografia original surgem em silhueta escura, são convertidos para um amarelo vivo quase fluorescente pelo mesmo mapa de cores, destacando-se com nitidez sobre o fundo de verdes e vermelhos." },
+  ],
+  41: [
+    { name: "Pilha de filtros combinados", value: "Wave, Wrap Displace, VHS Tracking, Echo/Ghost, Scanlines, Vintage", desc: "A fotografia é processada por uma pilha completa de filtros sobrepostos (entre outros, distorção ondulatória tipo Wave, deslocamento envolvente tipo Wrap Displace, instabilidade horizontal tipo VHS Tracking, repetição fantasma tipo Echo/Ghost, linhas de varrimento tipo Scanlines e uma gradação de cor tipo Vintage), que juntos dissolvem quase por completo a forma da flor e do fundo numa textura ondulada de bandas horizontais em tons sépia e creme." },
+    { name: "Distorção ondulatória", value: "Padrão têxtil repetido sobre toda a superfície", desc: "Sobre a textura resultante fica visível um padrão denso de ondas curtas e repetidas, semelhante a uma trama de tecido, resultado do componente Wave da pilha de filtros aplicado com alta frequência e amplitude." },
+    { name: "Riscas de varrimento", value: "Faixas horizontais finas intercaladas", desc: "Atravessam a composição riscas horizontais finas e regulares, mais visíveis nas zonas de transição entre claro e escuro, produzidas pelo componente Scanlines da pilha de filtros." },
+  ],
+  42: [
+    { name: "Arrastamento horizontal", value: "Tronco e roupa esticados em riscas largas", desc: "A partir dos ombros para baixo, a figura humana e a sua roupa vermelha são esticadas horizontalmente numa sequência de riscas largas e repetidas, resultado de um arrastamento manual com Smudge Tool ou de cópias da mesma faixa de pixels deslocadas lateralmente e empilhadas; o cão e a paisagem dessa zona ficam completamente ocultos sob as riscas, enquanto o céu e a cabeça da figura, acima dos ombros, mantêm a nitidez e a cor da fotografia original." },
+  ],
+};
+
+const DEFAULT_EFFECTS = [
+  { name: "Corrupção de canal", value: "Pendente", desc: "Descrição pendente." },
+  { name: "Contraste", value: "Pendente", desc: "Descrição pendente." },
+  { name: "Ruído", value: "Pendente", desc: "Descrição pendente." },
+  { name: "Artefacto", value: "Pendente", desc: "Descrição pendente." },
+];
+
+
+// Legendas por imagem, indexadas pelo número do ficheiro (ex: "IMG 7.webp" -> 7).
+// Vamos preenchendo imagem a imagem; as que ainda não têm entrada aqui usam o texto pendente por defeito.
+const BLURB_BY_NUM = {
+  1: "Peça de glitch art a partir de um plano macro de um olho humano. A paleta original é substituída por uma corrupção de canal em vermelho-âmbar, via Gradient Map, com o contraste levado ao limite.",
+  2: "Peça de glitch art a partir de um plano macro de um olho humano. A fotografia é reduzida a um vermelho quase monocromático, com zonas de tom invertido aplicadas localmente sobre a sobrancelha e o branco do olho.",
+  3: "Peça de glitch art que parte de uma fotografia de um homem e um cão junto a uma bandeira da Ucrânia. A figura humana é pixelizada com o filtro Mosaic, enquanto o resto da imagem permanece intacto.",
+  4: "Peça de glitch art a partir de uma fotografia noturna de um homem em pé, de braços cruzados, num parque escassamente iluminado. A figura é reduzida a um mosaico de blocos quadrados de grande escala, enquanto o fundo (céu, vegetação e luzes distantes) permanece com a resolução original da captura.",
+  5: "Peça de glitch art a partir de uma fotografia de um homem entre fetos, numa floresta de eucaliptos. A silhueta da figura é substituída por uma textura de nebulosa estelar, enquanto a floresta em redor sofre um desfoque radial que parece esticar-se a partir do ponto onde o sujeito se encontra.",
+  6: "Peça de glitch art a partir de uma fotografia noturna de duas pessoas num passeio urbano. As duas silhuetas são reduzidas a um azul sólido e cobertas por fragmentos de texto branco em tipo de letra monoespaçado, com a estética de um ecrã de erro de sistema operativo, enquanto o resto da fotografia (edifício, carros e iluminação de rua) permanece intacto.",
+  7: "Peça de glitch art a partir de um retrato em grande plano de um homem de óculos redondos, com luz quente e grão visível. A paleta avermelhada original é substituída por um duotone preto-ciano e os gradientes de tom são reduzidos a blocos planos por posterização.",
+  8: "Peça de glitch art a partir de um retrato direto de um homem em fundo neutro. O lado direito do rosto é esticado horizontalmente até derreter os traços, ampliando o olho de forma anómala, enquanto o lado esquerdo mantém a nitidez original e o enquadramento fica mais apertado do que na fotografia de origem.",
+  10: "Peça de glitch art a partir de uma fotografia de uma floresta de eucaliptos com fetos em primeiro plano. A imagem é cortada em fatias verticais de larguras irregulares e desalinhadas entre si, fraturando os troncos das árvores, enquanto a folhagem ganha uma saturação de verde mais vibrante do que na fotografia original.",
+  13: "Peça de glitch art a partir de um retrato em grande plano. A imagem é fragmentada em fatias verticais desalinhadas e convertida para tons reduzidos, criando uma reconstrução instável da face a partir de segmentos deslocados entre si.",
+  15: "Peça de glitch art a partir de uma fotografia de uma floresta de eucaliptos. A paisagem é parcialmente coberta por uma camada de erro de sistema com texto fragmentado, colada numa camada própria sobre a imagem original.",
+  16: "Peça de glitch art a partir de uma fotografia de flores. As pétalas e folhas são reorganizadas em blocos e faixas de cor desalinhadas, com cada segmento numa camada própria movida para fora da posição original.",
+  17: "Peça de glitch art a partir de uma fotografia de alstroemérias cor-de-rosa num jardim. A imagem é particionada numa grelha irregular de blocos retangulares desalinhados, com faixas horizontais de cor que duplicam fragmentos das flores.",
+  19: "Peça de glitch art a partir de uma fotografia de um edifício urbano contra um céu azul limpo. A zona central do céu é substituída por uma coluna vertical de cor avermelhada-acastanhada com gradiente suave, pintada numa camada própria com Gradient Tool.",
+  22: "Peça de glitch art a partir de uma composição de close-ups de olhos do mesmo rosto, em colagem. A paleta original de pele e sombras é colapsada num duotone vermelho-branco com ruído agressivo, e os fragmentos da colagem ganham juntas brancas explícitas que tornam visível a estrutura de recorte.",
+  23: "Peça de glitch art a partir de uma fotografia de um cão com arnês, enquadrado de perfil com paisagem desfocada ao fundo. A paleta castanha e cinzenta é substituída por um duotone verde-ciano, o fundo é atravessado por riscas horizontais de varrimento e os olhos do animal invertem para branco sem informação.",
+  24: "Peça de glitch art a partir de um retrato frontal de um homem em fundo branco. A paleta de pele e o fundo branco colapsam num duotone magenta-preto, com os olhos e o cabelo invertidos para branco, uma máscara escura sobre a zona central do rosto e uma textura de interferência analógica sobre toda a superfície.",
+  25: "Peça de glitch art a partir de uma fotografia de um homem a esticar a boca com as mãos, num espaço interior. A imagem é espelhada horizontalmente, a paleta convertida para verde-lima monocromático e o fundo de sala colapsado em preto, isolando a figura num retrato de alto contraste com halo luminoso no contorno.",
+  26: "Peça de glitch art a partir de uma fotografia de céu com nuvens altocumulus. Sobre a textura das nuvens são sobrepostas molduras retangulares concêntricas semitransparentes, criando uma estrutura geométrica aninhada que remete para artefactos de codec, enquanto a paleta azul da imagem é amplificada.",
+  27: "Peça de glitch art a partir de um retrato de um homem de óculos em frente a uma parede de flores roxas. A paleta original é convertida para um duotone azul-branco, o rosto colapsa em branco absoluto sem nenhum detalhe facial e o fundo escuro de folhagem converte-se em azul vivo com toques de ciano.",
+  28: "Peça de glitch art a partir de uma fotografia de um homem sentado num sofá de couro verde, numa sala doméstica. A paleta quente é substituída por um duotone azul-ciano, a zona superior colapsa em branco absoluto, o rosto desaparece e o sofá e a figura fundem-se num azul escuro que apaga a separação entre os planos.",
+  30: "Peça de glitch art a partir de uma fotografia de uma floresta de eucaliptos. A imagem é decomposta numa grelha de triângulos alternados, com metade das peças deslocada verticalmente, fraturando os troncos, o céu e a vegetação num padrão repetido de losangos.",
+  31: "Peça de glitch art a partir de uma fotografia de um pinheiro solitário contra um céu nublado. A imagem é decomposta numa grelha retangular regular, com cada bloco deslocado verticalmente em relação aos vizinhos, partindo o tronco, os ramos e a copa em segmentos desalinhados.",
+  32: "Peça de glitch art a partir de um retrato de um homem com a mão apoiada no queixo, em fundo de pinheiral desfocado. A imagem é convertida para preto e branco com grão pronunciado, e sobre o rosto é sobreposta uma sequência de cópias rodadas e desfasadas que formam um padrão de anéis concêntricos, distorcendo os traços faciais entre a testa e o queixo.",
+  33: "Peça de glitch art a partir de um retrato direto de um homem em fundo branco. A imagem é convertida para preto e branco e a zona da cara é substituída por uma estrutura de túnel, com cópias decrescentes do próprio rosto encaixadas até um ponto de fuga ao centro.",
+  34: "Peça de glitch art a partir de uma fotografia de um homem com maquilhagem de palhaço. A paleta é reduzida via posterização a blocos planos de vermelho, amarelo, branco e preto, com o fundo colapsado em preto absoluto e uma camada densa de grão sobre toda a imagem.",
+  35: "Peça de glitch art a partir de uma selfie de um homem com maquilhagem de palhaço a meio. A imagem é convertida para preto e branco com contraste levado ao limite, os olhos colapsam em preto absoluto e uma camada de grão denso cobre toda a superfície.",
+  37: "Peça de glitch art a partir de uma selfie de um homem com maquilhagem de palhaço. Quase toda a imagem colapsa em preto absoluto, restando apenas pequenos vestígios de luz na testa, nas bochechas e no queixo, convertidos para um verde-ciano saturado.",
+  38: "Peça de glitch art a partir de uma fotografia de uma torre de alta tensão contra um céu nublado, junto a uma linha de eucaliptos. Toda a imagem é convertida por um mapa de cores falsas em faixas concêntricas de rosa, verde, azul e laranja, com a zona mais clara do céu transformada num círculo de rosa sólido.",
+  39: "Peça de glitch art a partir de uma fotografia de um caminho de terra entre muros de pedra musgosos, sob um túnel de árvores. Toda a imagem é convertida por um mapa de cores falsas, substituindo os verdes e castanhos originais por faixas de amarelo, azul e magenta organizadas em contornos concêntricos.",
+  40: "Peça de glitch art a partir de uma fotografia de uma torre de alta tensão vista de baixo contra um céu nublado. Toda a imagem é convertida por um mapa de cores falsas em faixas concêntricas de verde-limão, vermelho-acastanhado e amarelo, com a estrutura metálica e os cabos a destacar-se em amarelo fluorescente.",
+  41: "Peça de glitch art a partir de uma fotografia de uma margarida amarela em fundo verde escuro. Uma pilha completa de filtros sobrepostos, incluindo distorção ondulatória, instabilidade tipo VHS e linhas de varrimento, dissolve quase por completo a forma da flor numa textura ondulada de bandas horizontais em tons sépia e creme.",
+  42: "Peça de glitch art a partir de uma fotografia de um homem com um cão, vistos de costas sobre um vale. A partir dos ombros para baixo, a figura é esticada horizontalmente numa sequência de riscas largas e repetidas que ocultam por completo o cão e a paisagem dessa zona, enquanto o céu e a cabeça mantêm a nitidez original.",
+};
+
+const FRAMES = [
+  ["Crista Norte","PAISAGEM","IMG 1.webp"],
+  ["Vidro e Aço","URBANO","IMG 2.webp"],
+  ["Maré Baixa","COSTEIRO","IMG 3.webp"],
+  ["Interior Sereno","RETRATO","IMG 4.webp"],
+  ["Campo Queimado","PAISAGEM","IMG 5.webp"],
+  ["Halogéneo","ABSTRATO","IMG 6.webp"],
+  ["Deriva","NATUREZA","IMG 7.webp"],
+  ["Hora Pálida","PAISAGEM","IMG 8.webp"],
+  ["Curva Apertada","PAISAGEM","IMG 10.webp"],
+  ["Água Parada","COSTEIRO","IMG 13.webp"],
+  ["Luz da Fundição","URBANO","IMG 15.webp"],
+  ["Sub-bosque","NATUREZA","IMG 16.webp"],
+  ["Terreno Vago","URBANO","IMG 17.webp"],
+  ["Salina","PAISAGEM","IMG 19.webp"],
+  ["Turno da Noite","URBANO","IMG 22.webp"],
+  ["Frente Fria","PAISAGEM","IMG 23.webp"],
+  ["Limiar","ARQUITETURA","IMG 24.webp"],
+  ["Planície Aberta","PAISAGEM","IMG 25.webp"],
+  ["Pausa para Fumar","RETRATO","IMG 26.webp"],
+  ["Pavimento Molhado","URBANO","IMG 27.webp"],
+  ["Falsa Primavera","NATUREZA","IMG 28.webp"],
+  ["Sombra Longa","ARQUITETURA","IMG 30.webp"],
+  ["Telhado de Lata","ARQUITETURA","IMG 31.webp"],
+  ["Contraluz","RETRATO","IMG 32.webp"],
+  ["Foco Suave","ABSTRATO","IMG 33.webp"],
+  ["Rua Lateral","URBANO","IMG 34.webp"],
+  ["Águas Altas","COSTEIRO","IMG 35.webp"],
+  ["Última Luz","PAISAGEM","IMG 37.webp"],
+  ["Gravilha Solta","PAISAGEM","IMG 38.webp"],
+  ["Linha de Nevoeiro","NATUREZA","IMG 39.webp"],
+  ["Estação Seca","PAISAGEM","IMG 40.webp"],
+  ["Hora Azul","URBANO","IMG 41.webp"],
+  ["Fio Nu","ABSTRATO","IMG 42.webp"],
+].map(([title, category, file], i) => {
+  const id = i + 1;
+  const num = file.match(/\d+/)[0]; // extract the number out of "IMG 7.webp" -> "7"
+  return {
+    id,
+    title,
+    category,
+    year: 2021 + (i % 5),
+    location: "Localização pendente",
+    blurb: BLURB_BY_NUM[num] || `Legenda pendente: substitua por uma frase sobre "${title}".`,
+    src: `${file}`,
+    beforeSrc: `A IMG ${num}.webp`,
+    effects: EFFECTS_BY_NUM[num] || DEFAULT_EFFECTS,
+  };
+});
+
+// shuffle into a random order on every page load
+(function shuffleFrames(arr){
+  for (let i = arr.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+})(FRAMES);
+
+/* ============ RENDER WALL (3 looping rows) ============ */
+const wallEl = document.getElementById("wall");
+const COLS = 11;
+const ROWS = 3;
+
+// split the 33 frames into 3 rows of 11
+const rowFrames = [0, 1, 2].map(r => FRAMES.slice(r * COLS, r * COLS + COLS));
+
+function makeTile(f, globalIndex){
+  const tile = document.createElement("button");
+  tile.className = "tile";
+  tile.setAttribute("data-index", globalIndex);
+  tile.setAttribute("aria-label", `Abrir moldura ${String(f.id).padStart(2,"0")}`);
+
+  if (f.src){
+    const img = document.createElement("img");
+    img.src = f.src;
+    img.alt = "";
+    img.loading = "lazy";
+    img.decoding = "async";
+    tile.appendChild(img);
+  } else {
+    const placeholder = document.createElement("div");
+    placeholder.className = "placeholder";
+    tile.appendChild(placeholder);
+  }
+
+  tile.addEventListener("click", () => openViewer(globalIndex));
+  return tile;
+}
+
+const rowEls = [];      // the 3 .wall-row elements
+const rowDirs = [1, -1, 1]; // row1 & row3 move right, row2 moves left
+const rowSpeeds = [22, 18, 22]; // px/sec
+const rowOffsets = [0, 0, 0];   // current scroll offset per row
+let rowSetWidth = [0, 0, 0];    // width of ONE set of 11 tiles (for wrapping)
+
+rowFrames.forEach((frames, r) => {
+  const rowEl = document.createElement("div");
+  rowEl.className = `wall-row row-${r + 1}`;
+
+  // duplicate the row's tiles so the strip can loop seamlessly:
+  // [11 tiles][11 tiles][11 tiles]; middle copy is what's visible at rest
+  for (let copy = 0; copy < 3; copy++){
+    frames.forEach((f, i) => {
+      const globalIndex = r * COLS + i;
+      rowEl.appendChild(makeTile(f, globalIndex));
+    });
+  }
+
+  wallEl.appendChild(rowEl);
+  rowEls.push(rowEl);
+});
+
+/* ============ WALL "PARTING" HOVER EFFECT ============ */
+const RADIUS = 240;
+const MAX_PUSH = 22;
+let mouse = { x: -9999, y: -9999 };
+let frozen = false;
+
+const wallWrap = document.querySelector(".wall-wrap");
+const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+setTileWidth();
+
+wallWrap.addEventListener("mousemove", (e) => {
+  const wrapRect = wallWrap.getBoundingClientRect();
+  mouse.x = e.clientX - wrapRect.left;
+  mouse.y = e.clientY - wrapRect.top;
+});
+wallWrap.addEventListener("mouseleave", () => {
+  mouse.x = -9999; mouse.y = -9999;
+});
+
+/* ============ COMBINED SCROLL + PARTING LOOP ============ */
+function setTileWidth(){
+  // width fills 11 columns + 10 gaps across the wall; tile height then follows
+  // automatically via the A3 aspect-ratio set in CSS, so no image gets cropped
+  const wrapRect = wallWrap.getBoundingClientRect();
+  const gap = 6;
+  const w = (wrapRect.width - gap * (COLS - 1)) / COLS;
+  document.documentElement.style.setProperty("--tile-w", `${w.toFixed(2)}px`);
+}
+
+let hasCalibratedOnce = false;
+
+function measureRowSetWidth(){
+  rowEls.forEach((rowEl, r) => {
+    const tiles = rowEl.children;
+    const oneSetCount = COLS;
+    if (tiles.length < oneSetCount + 1) return;
+    // width of one set = position of the (COLS)-th tile minus position of the 1st
+    const first = tiles[0].getBoundingClientRect();
+    const afterSet = tiles[oneSetCount].getBoundingClientRect();
+    const newWidth = afterSet.left - first.left;
+    if (newWidth <= 0) return; // not laid out yet, skip; keep previous value
+
+    const prevWidth = rowSetWidth[r];
+    rowSetWidth[r] = newWidth;
+
+    if (!hasCalibratedOnce || prevWidth <= 0){
+      // first real measurement for this row: center it in the middle copy
+      rowOffsets[r] = -newWidth;
+    } else if (Math.abs(newWidth - prevWidth) > 0.5){
+      // width genuinely changed (e.g. viewport resize); rescale the
+      // current offset proportionally instead of snapping back to center,
+      // so a row mid-flight doesn't jump or desync from its visible tiles
+      const ratio = newWidth / prevWidth;
+      rowOffsets[r] *= ratio;
+    }
+    rowEl.style.transform = `translate3d(${rowOffsets[r]}px,0,0)`;
+  });
+  hasCalibratedOnce = true;
+}
+
+let lastTime = null;
+function tick(t){
+  if (lastTime === null) lastTime = t;
+  const dt = (t - lastTime) / 1000;
+  lastTime = t;
+
+  const wrapRect = wallWrap.getBoundingClientRect();
+
+  rowEls.forEach((rowEl, r) => {
+    if (!reduceMotion){
+      rowOffsets[r] += rowDirs[r] * rowSpeeds[r] * dt;
+      // wrap seamlessly once we've drifted a full set-width in either direction
+      if (rowSetWidth[r] > 0){
+        const limit = rowSetWidth[r];
+
+        while (rowOffsets[r] <= -limit * 2){
+          rowOffsets[r] += limit;
+        }
+
+        while (rowOffsets[r] >= 0){
+          rowOffsets[r] -= limit;
+        }
+      }
+    }
+
+    const tiles = rowEl.children;
+    for (let i = 0; i < tiles.length; i++){
+      const tile = tiles[i];
+      let px = 0, py = 0, scale = 1;
+
+      if (!frozen){
+        const r2 = tile.getBoundingClientRect();
+        const cx = r2.left + r2.width / 2 - wrapRect.left;
+        const cy = r2.top + r2.height / 2 - wrapRect.top;
+        const dx = cx - mouse.x;
+        const dy = cy - mouse.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < RADIUS){
+          const factor = 1 - dist / RADIUS;
+          const angle = Math.atan2(dy, dx);
+          px = Math.cos(angle) * factor * MAX_PUSH;
+          py = Math.sin(angle) * factor * MAX_PUSH;
+          scale = 1 - factor * 0.05;
+        }
+      }
+      tile.style.transform = `translate(${px.toFixed(1)}px, ${py.toFixed(1)}px) scale(${scale.toFixed(3)})`;
+    }
+
+    rowEl.style.transform = `translate3d(${rowOffsets[r].toFixed(2)}px,0,0)`;
+    rowEl.style.willChange = "transform";
+  });
+
+  requestAnimationFrame(tick);
+}
+
+function calibrate(){
+  setTileWidth();
+  measureRowSetWidth();
+}
+
+window.addEventListener("load", calibrate);
+window.addEventListener("resize", calibrate);
+setTimeout(calibrate, 300); // after font/image layout settles
+requestAnimationFrame(tick);
+
+/* ============ VIEWER ============ */
+const viewer = document.getElementById("viewer");
+const vBlurb = document.getElementById("viewer-blurb");
+const vCounter = document.getElementById("viewer-counter");
+const vEffectsList = document.getElementById("effects-list");
+const vEffectsDisclosure = document.getElementById("effects-disclosure");
+const vCompareToggle = document.getElementById("compare-toggle");
+const vCompareToggleLabel = document.getElementById("compare-toggle-label");
+const vFrame = document.getElementById("viewer-frame");
+const vImg = document.getElementById("viewer-img");
+const vImgEl = document.getElementById("viewer-img-el");
+const vCompareBefore = document.getElementById("compare-before");
+const vCompareHandle = document.getElementById("compare-handle");
+
+let current = 0;
+let lastFocused = null;
+let compareOn = false;
+
+function renderViewer(i){
+  const f = FRAMES[i];
+  vBlurb.textContent = f.blurb;
+  vCounter.textContent = `${String(i+1).padStart(2,"0")} / ${FRAMES.length}`;
+
+  // main image
+  if (f.src){
+    vImgEl.src = f.src;
+    vImgEl.style.display = "block";
+  } else {
+    vImgEl.style.display = "none";
+  }
+
+  // "before" overlay: a real unedited image if provided, otherwise the same
+  // photo with a filter applied as a stand-in so the slider has something to compare
+  if (f.beforeSrc){
+    vCompareBefore.style.backgroundImage = `url("${f.beforeSrc}")`;
+    vCompareBefore.style.backgroundSize = "cover";
+    vCompareBefore.style.backgroundPosition = "center";
+    vCompareBefore.style.filter = "none";
+  } else if (f.src){
+    vCompareBefore.style.backgroundImage = `url("${f.src}")`;
+    vCompareBefore.style.backgroundSize = "cover";
+    vCompareBefore.style.backgroundPosition = "center";
+    vCompareBefore.style.filter = "saturate(1.4) contrast(0.92)"; /* stand-in until a real "before" photo is added */
+  } else {
+    vCompareBefore.style.backgroundImage = "";
+    vCompareBefore.style.filter = "saturate(1.4) contrast(0.92)";
+  }
+
+  // effects list
+  vEffectsList.innerHTML = "";
+  (f.effects || []).forEach(fx => {
+    const li = document.createElement("li");
+    li.innerHTML = `
+      <div class="fx-row">
+        <span class="fx-name">${fx.name}</span>
+        <span class="fx-value">${fx.value || ""}</span>
+      </div>
+      ${fx.desc ? `<p class="fx-desc">${fx.desc}</p>` : ""}
+    `;
+    vEffectsList.appendChild(li);
+  });
+  vEffectsDisclosure.open = false;
+  vEffectsList.scrollTop = 0;
+  requestAnimationFrame(updateEffectsFade);
+
+  // reset compare state on every new image
+  setCompare(false);
+}
+
+function updateEffectsFade(){
+  if (!vEffectsList) return;
+  const overflowing = vEffectsList.scrollHeight - vEffectsList.clientHeight > 4;
+  const nearBottom = vEffectsList.scrollTop + vEffectsList.clientHeight >= vEffectsList.scrollHeight - 4;
+  vEffectsList.classList.toggle("has-more-below", overflowing && !nearBottom);
+}
+vEffectsList.addEventListener("scroll", updateEffectsFade);
+vEffectsDisclosure.addEventListener("toggle", () => {
+  if (vEffectsDisclosure.open) requestAnimationFrame(updateEffectsFade);
+});
+window.addEventListener("resize", () => {
+  if (vEffectsDisclosure.open) updateEffectsFade();
+});
+
+function setCompare(on){
+  compareOn = on;
+  vImg.classList.toggle("compare-active", on);
+  vCompareToggle.setAttribute("aria-pressed", String(on));
+  vCompareToggleLabel.textContent = on ? "A ver o antes" : "Comparar antes / depois";
+  if (on) setComparePos(50);
+}
+
+function setComparePos(percent){
+  const clamped = Math.max(0, Math.min(100, percent));
+  vImg.style.setProperty("--compare-pos", `${clamped}%`);
+}
+
+vCompareToggle.addEventListener("click", () => setCompare(!compareOn));
+
+// drag to move the before/after split
+let dragging = false;
+function posFromEvent(e){
+  const rect = vImg.getBoundingClientRect();
+  const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+  return (x / rect.width) * 100;
+}
+vCompareHandle.style.pointerEvents = "none";
+vImg.addEventListener("pointerdown", (e) => {
+  if (!compareOn) return;
+  dragging = true;
+  setComparePos(posFromEvent(e));
+});
+window.addEventListener("pointermove", (e) => {
+  if (!dragging) return;
+  setComparePos(posFromEvent(e));
+});
+window.addEventListener("pointerup", () => { dragging = false; });
+
+function openViewer(i){
+  current = i;
+  lastFocused = document.activeElement;
+  renderViewer(i);
+  viewer.setAttribute("data-open", "true");
+  frozen = true;
+  document.body.style.overflow = "hidden";
+  document.getElementById("viewer-close").focus();
+}
+
+function closeViewer(){
+  viewer.setAttribute("data-open", "false");
+  frozen = false;
+  document.body.style.overflow = "";
+  if (lastFocused) lastFocused.focus();
+}
+
+function step(dir){
+  current = (current + dir + FRAMES.length) % FRAMES.length;
+  renderViewer(current);
+}
+
+document.getElementById("viewer-close").addEventListener("click", closeViewer);
+document.getElementById("viewer-backdrop").addEventListener("click", closeViewer);
+document.getElementById("viewer-prev").addEventListener("click", () => step(-1));
+document.getElementById("viewer-next").addEventListener("click", () => step(1));
+
+document.addEventListener("keydown", (e) => {
+  if (viewer.getAttribute("data-open") !== "true") return;
+  if (e.key === "Escape") closeViewer();
+  if (e.key === "ArrowLeft") step(-1);
+  if (e.key === "ArrowRight") step(1);
+});
+
+/* ============ THEME TOGGLE ============ */
+const lightBtn = document.getElementById("theme-light");
+const darkBtn = document.getElementById("theme-dark");
+
+function setTheme(light){
+  document.documentElement.classList.toggle("light", light);
+  lightBtn.setAttribute("aria-pressed", String(light));
+  darkBtn.setAttribute("aria-pressed", String(!light));
+}
+lightBtn.addEventListener("click", () => setTheme(true));
+darkBtn.addEventListener("click", () => setTheme(false));
+</script>
+</body>
+</html>
