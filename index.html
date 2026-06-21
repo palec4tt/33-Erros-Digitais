@@ -740,6 +740,7 @@ const FRAMES = [
   const id = i + 1;
   const num = file.match(/\d+/)[0]; // extract the number out of "IMG 7.webp" -> "7"
   const IMAGE_BASE = "https://github.com/palec4tt/33-Erros-Digitais/releases/download/Imagens/";
+
   return {
     id,
     title,
@@ -747,8 +748,8 @@ const FRAMES = [
     year: 2021 + (i % 5),
     location: "Localização pendente",
     blurb: BLURB_BY_NUM[num] || `Legenda pendente: substitua por uma frase sobre "${title}".`,
-    src: IMAGE_BASE + file,
-    beforeSrc: IMAGE_BASE + `A IMG ${num}.webp`,
+    src: IMAGE_BASE + encodeURIComponent(`IMG.${num}.webp`),
+    beforeSrc: IMAGE_BASE + encodeURIComponent(`A.IMG.${num}.webp`),
     effects: EFFECTS_BY_NUM[num] || DEFAULT_EFFECTS,
   };
 });
